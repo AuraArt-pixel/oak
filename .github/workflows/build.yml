@@ -8,10 +8,12 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      CMAKE_BUILD_TYPE: Release
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: 'recursive'
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -43,12 +45,36 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DBUILD_TESTS=OFF \
             -DBUILD_QT6=ON \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release 2>&1 | tee configure.log
+          echo "=== CMake Configure Exit Code: $? ==="
 
       - name: Build
         shell: msys2 {0}
         run: |
-          cmake --build build --config Release
+          cmake --build build --config Release 2>&1 | tee build.log
+
+      - name: Show build errors on failure
+        if: failure()
+        shell: msys2 {0}
+        run: |
+          echo "========== LAST 80 LINES OF BUILD LOG =========="
+          tail -80 build.log
+          echo "========== CMAKE ERROR LOG (if exists) =========="
+          cat build/CMakeFiles/CMakeError.log 2>/dev/null || echo "No CMakeError.log found"
+          echo "========== CONFIGURE LOG ERRORS =========="
+          grep -i -E "(error|fatal|failed|not found)" configure.log || echo "No obvious errors in configure log"
+          echo "========== NINJA BUILD ERRORS =========="
+          grep -i -E "(FAILED|error:|fatal error:)" build.log || echo "No error lines found in build log"
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-error-log
+          path: |
+            build.log
+            configure.log
+          retention-days: 7
 
       - name: Package
         shell: msys2 {0}

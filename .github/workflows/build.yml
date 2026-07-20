@@ -3,6 +3,7 @@ on:
   push:
     branches: [ main, ae-lite, master ]
   workflow_dispatch:
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -11,6 +12,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 1
+
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -31,21 +33,35 @@ jobs:
             vulkan-headers:p
             vulkan-loader:p
             glfw:p
-      - shell: msys2 {0}
+
+      - name: Configure
+        shell: msys2 {0}
         run: |
           export PATH="/ucrt64/bin:$PATH"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_QT6=ON -DBUILD_TESTS=OFF -DUSE_WERROR=OFF
-      - shell: msys2 {0}
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_QT6=ON \
+            -DBUILD_TESTS=OFF \
+            -DUSE_WERROR=OFF
+
+      - name: Build
+        shell: msys2 {0}
         run: |
           export PATH="/ucrt64/bin:$PATH"
           cmake --build build --config Release
-      - shell: msys2 {0}
+
+      - name: Package
+        shell: msys2 {0}
         run: |
           mkdir -p dist
           cp build/app/olive-editor.exe dist/AE-Lite.exe
-          ldd build/app/olive-editor.exe | grep ucrt64 | awk '{print $3}' | while read dll; do cp "$dll" dist/ 2>/dev/null; done
-          cp build/ffmpeg_bridge/libffmpeg_bridge.dll dist/ 2>/dev/null; true
-      - uses: actions/upload-artifact@v4
+          ldd build/app/olive-editor.exe | grep ucrt64 | awk '{print $3}' | while read dll; do
+            cp "$dll" dist/ 2>/dev/null || true
+          done
+          cp build/ffmpeg_bridge/libffmpeg_bridge.dll dist/ 2>/dev/null || true
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
         with:
           name: AE-Lite-Windows-x64
           path: dist/

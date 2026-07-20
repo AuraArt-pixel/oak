@@ -61,18 +61,11 @@ jobs:
           echo "========== NINJA BUILD ERRORS =========="
           grep -i -E "(FAILED|error:|fatal error:)" build.log || echo "No error lines found in build log"
 
-      - name: Find built executables
-        shell: msys2 {0}
-        run: |
-          echo "=== All .exe files in build/ ==="
-          find build -name "*.exe" -type f
-          echo "=== All .dll files in build/ ==="
-          find build -name "*.dll" -type f
-
       - name: Package
         shell: msys2 {0}
         run: |
           mkdir -p dist
+
           EXE_FILE=$(find build/app -maxdepth 1 -name "*.exe" -type f | head -1)
           if [ -n "$EXE_FILE" ]; then
             cp "$EXE_FILE" dist/AE-Lite.exe
@@ -82,12 +75,32 @@ jobs:
             find build -name "*.exe" -type f
             exit 1
           fi
-          ldd dist/AE-Lite.exe | grep ucrt64 | awk '{print $3}' | while read dll; do
-            cp "$dll" dist/ 2>/dev/null || true
-          done
+
           find build -name "*.dll" -not -path "*/dist/*" -exec cp {} dist/ \; 2>/dev/null || true
+
+          for pass in 1 2 3; do
+            echo "--- DLL collection pass $pass ---"
+            for bin in dist/*.exe dist/*.dll; do
+              [ -f "$bin" ] || continue
+              ldd "$bin" 2>/dev/null | grep -o '/ucrt64/[^ ]*\.dll' | while read dll; do
+                if [ -f "$dll" ] && [ ! -f "dist/$(basename $dll)" ]; then
+                  cp "$dll" dist/
+                  echo "  Copied: $(basename $dll)"
+                fi
+              done
+            done
+          done
+
+          QT_PLUGINS="D:/a/_temp/msys64/ucrt64/share/qt6/plugins"
+          mkdir -p dist/platforms dist/imageformats dist/styles
+          cp "$QT_PLUGINS/platforms/qwindows.dll" dist/platforms/ 2>/dev/null || true
+          cp "$QT_PLUGINS/imageformats/"*.dll dist/imageformats/ 2>/dev/null || true
+          cp "$QT_PLUGINS/styles/"*.dll dist/styles/ 2>/dev/null || true
+
           echo "=== Contents of dist/ ==="
           ls -la dist/
+          echo "=== Total size ==="
+          du -sh dist/
 
       - name: Upload
         uses: actions/upload-artifact@v4

@@ -442,15 +442,15 @@ void MainWindow::set_application_progress_status(ProgressStatus status)
 #if defined(Q_OS_WINDOWS)
 	if (taskbar_interface_) {
 		switch (status) {
-		case kProgressShow:
+		case k_progress_show:
 			taskbar_interface_->SetProgressState(
 				reinterpret_cast<HWND>(this->winId()), TBPF_NORMAL);
 			break;
-		case kProgressNone:
+		case k_progress_none:
 			taskbar_interface_->SetProgressState(
 				reinterpret_cast<HWND>(this->winId()), TBPF_NOPROGRESS);
 			break;
-		case kProgressError:
+		case k_progress_error:
 			taskbar_interface_->SetProgressState(
 				reinterpret_cast<HWND>(this->winId()), TBPF_ERROR);
 			break;

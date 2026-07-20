@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
 							 "main", "Decompress project file (No GUI)"));
 
 #ifdef _WIN32
-	auto console_option = parser.AddOption(
+	auto console_option = parser.add_option(
 		{ QStringLiteral("c"), QStringLiteral("-console") },
 		QCoreApplication::translate("main", "Launch with debug console"));
 #endif // _WIN32
@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 		// Since Oak Video Editor is linked with the console subsystem (for better POSIX compatibility), a console
 		// is created by default. If the user didn't request one, we free it here.
-		if (!console_option->IsSet()) {
+		if (!console_option->is_set()) {
 			FreeConsole();
 		}
 #endif // _WIN32

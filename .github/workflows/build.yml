@@ -1,4 +1,5 @@
 name: Build AE-Lite
+
 on:
   push:
     branches: [ main, ae-lite, master ]
@@ -10,44 +11,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-          fetch-depth: 1
+          submodules: 'true'
 
-      - uses: msys2/setup-msys2@v2
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
-          pacboy: >-
-            cmake:p
-            ninja:p
-            gcc:p
-            qt6-base:p
-            qt6-tools:p
-            ffmpeg:p
-            openimageio:p
-            opencolorio:p
-            openexr:p
-            fmt:p
-            expat:p
-            portaudio:p
-            vulkan-headers:p
-            vulkan-loader:p
-            glfw:p
+          cache: true
+          install: >-
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-openimageio
+            mingw-w64-ucrt-x86_64-opencolorio
+            mingw-w64-ucrt-x86_64-openexr
+            mingw-w64-ucrt-x86_64-fmt
+            mingw-w64-ucrt-x86_64-expat
+            mingw-w64-ucrt-x86_64-portaudio
+            mingw-w64-ucrt-x86_64-vulkan-headers
+            mingw-w64-ucrt-x86_64-vulkan-loader
+            mingw-w64-ucrt-x86_64-make
+            mingw-w64-ucrt-x86_64-ccache
 
       - name: Configure
         shell: msys2 {0}
         run: |
-          export PATH="/ucrt64/bin:$PATH"
           cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_QT6=ON \
             -DBUILD_TESTS=OFF \
-            -DUSE_WERROR=OFF
+            -DBUILD_QT6=ON \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         shell: msys2 {0}
         run: |
-          export PATH="/ucrt64/bin:$PATH"
           cmake --build build --config Release
 
       - name: Package

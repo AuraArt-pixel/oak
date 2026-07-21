@@ -41,66 +41,22 @@ jobs:
 
       - name: Configure
         shell: msys2 {0}
-        run: |
-          cmake -S . -B build -G Ninja \
-            -DBUILD_TESTS=OFF \
-            -DBUILD_QT6=ON \
-            -DCMAKE_BUILD_TYPE=Release 2>&1 | tee configure.log
+        run: cmake -S . -B build -G Ninja -DBUILD_TESTS=OFF -DBUILD_QT6=ON -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         shell: msys2 {0}
-        run: |
-          cmake --build build --config Release 2>&1 | tee build.log
-
-      - name: Show build errors on failure
-        if: failure()
-        shell: msys2 {0}
-        run: |
-          echo "========== LAST 80 LINES OF BUILD LOG =========="
-          tail -80 build.log
-          echo "========== NINJA BUILD ERRORS =========="
-          grep -i -E "(FAILED|error:|fatal error:)" build.log || echo "No error lines found in build log"
+        run: cmake --build build --config Release
 
       - name: Package
         shell: msys2 {0}
         run: |
           mkdir -p dist
-
-          EXE_FILE=$(find build/app -maxdepth 1 -name "*.exe" -type f | head -1)
-          if [ -n "$EXE_FILE" ]; then
-            cp "$EXE_FILE" dist/AE-Lite.exe
-            echo "Packaged: $EXE_FILE -> dist/AE-Lite.exe"
-          else
-            echo "ERROR: No .exe found in build/app/"
-            find build -name "*.exe" -type f
-            exit 1
-          fi
-
-          find build -name "*.dll" -not -path "*/dist/*" -exec cp {} dist/ \; 2>/dev/null || true
-
-          for pass in 1 2 3; do
-            echo "--- DLL collection pass $pass ---"
-            for bin in dist/*.exe dist/*.dll; do
-              [ -f "$bin" ] || continue
-              ldd "$bin" 2>/dev/null | grep -o '/ucrt64/[^ ]*\.dll' | while read dll; do
-                if [ -f "$dll" ] && [ ! -f "dist/$(basename $dll)" ]; then
-                  cp "$dll" dist/
-                  echo "  Copied: $(basename $dll)"
-                fi
-              done
-            done
-          done
-
-          QT_PLUGINS="D:/a/_temp/msys64/ucrt64/share/qt6/plugins"
-          mkdir -p dist/platforms dist/imageformats dist/styles
-          cp "$QT_PLUGINS/platforms/qwindows.dll" dist/platforms/ 2>/dev/null || true
-          cp "$QT_PLUGINS/imageformats/"*.dll dist/imageformats/ 2>/dev/null || true
-          cp "$QT_PLUGINS/styles/"*.dll dist/styles/ 2>/dev/null || true
-
-          echo "=== Contents of dist/ ==="
-          ls -la dist/
-          echo "=== Total size ==="
-          du -sh dist/
+          cp build/app/oak-editor.exe dist/AE-Lite.exe
+          cp build/app/*.dll dist/ 2>/dev/null || true
+          cp /ucrt64/bin/*.dll dist/ 2>/dev/null || true
+          mkdir -p dist/platforms dist/imageformats
+          cp /ucrt64/share/qt6/plugins/platforms/qwindows.dll dist/platforms/ 2>/dev/null || true
+          cp /ucrt64/share/qt6/plugins/imageformats/*.dll dist/imageformats/ 2>/dev/null || true
 
       - name: Upload
         uses: actions/upload-artifact@v4
